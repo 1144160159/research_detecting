@@ -1,0 +1,15 @@
+# python main_train.py --obj=bottle     --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=hazelnut   --lr 5e-5 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 0.1
+# python main_train.py --obj=capsule    --lr 1e-5 --epochs 601  --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=metal_nut  --lr 1e-5 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0 --use_det_64
+# python main_train.py --obj=leather    --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=pill       --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=wood       --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=carpet     --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=tile       --lr 1e-5 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=grid       --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=cable      --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=transistor --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=toothbrush --lr 1e-4 --epochs 601  --log_epoch 10 --use_geo use_hyper --curvature_h 1.0
+# python main_train.py --obj=screw      --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 0.1 --D_emb 256 --lambda_value 1.0
+# python main_train.py --obj=zipper     --lr 1e-4 --epochs 1201 --log_epoch 10 --use_geo use_hyper --curvature_h 1.0 --D_emb 512

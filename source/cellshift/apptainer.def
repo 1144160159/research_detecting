@@ -1,0 +1,47 @@
+#
+# Build like this from within repo:
+#   apptainer build cellshift.sif apptainer.def
+# Then run like this:
+#   apptainer shell --no-home cellshift.sif
+#
+Bootstrap: docker
+From: debian:12-slim
+
+# Install software
+# https://docs.sylabs.io/guides/latest/user-guide/definition_files.html#post
+%post
+    export LC_ALL=C
+    export DEBIAN_FRONTEND=noninteractive
+
+    # refresh apt
+    apt update
+
+    # standard packages
+    apt install -y tasksel dialog progress
+    tasksel install standard
+
+    # baseline tools (cmake is needed to build some Rust crates)
+    apt install -y clang curl cmake git xz-utils zstd
+
+    # for hdf5 support
+    apt install -y libhdf5-dev hdf5-filter-plugin hdf5-filter-plugin-blosc-serial
+
+    # cleanup
+    apt clean
+
+    # install rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs --output rustup-init.sh
+    sh rustup-init.sh -y
+    export PATH="${HOME}/.cargo/bin:/opt/bin:${PATH}"
+
+    # install cellshift
+    cargo install --root /opt/ --git https://github.com/robgjansen/cellshift.git
+
+# This is the runtime environment, not the build environment
+# https://docs.sylabs.io/guides/latest/user-guide/definition_files.html#environment
+%environment
+    export LC_ALL=C
+    export PATH="${HOME}/.cargo/bin:/opt/bin:${PATH}"
+
+%runscript
+    /bin/bash

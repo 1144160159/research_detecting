@@ -1,0 +1,15 @@
+# python main_train.py --obj=bottle     --epochs 1201 --log_epoch 10 --use_minus_distance
+# python main_train.py --obj=metal_nut  --epochs 1201 --log_epoch 10 --use_minus_distance
+# python main_train.py --obj=cable      --epochs 1201 --log_epoch 10 --use_minus_distance
+# python main_train.py --obj=hazelnut   --epochs 1201 --log_epoch 10 
+# python main_train.py --obj=wood       --epochs 1201 --log_epoch 10 
+# python main_train.py --obj=zipper     --epochs 1201 --log_epoch 10 
+# python main_train.py --obj=transistor --epochs 601  --log_epoch 10
+# python main_train.py --obj=toothbrush --epochs 601  --log_epoch 10
+# python main_train.py --obj=carpet     --epochs 1201 --log_epoch 10 --use_minus_distance --D_emb 256   # unstable
+# python main_train.py --obj=grid       --epochs 1201 --log_epoch 10 --use_minus_distance --D_emb 256   # unstable
+# python main_train.py --obj=capsule    --epochs 1201 --log_epoch 10 --D_emb 1024                       # unstable
+# python main_train.py --obj=leather    --epochs 1201 --log_epoch 10 --D_emb 256                        # unstable
+# python main_train.py --obj=pill       --epochs 1201 --log_epoch 10 --D_emb 1024                       # unstable
+# python main_train.py --obj=tile       --epochs 1201 --log_epoch 10 --D_emb 1024                       # unsatble
+# python main_train.py --obj=screw      --epochs 601  --log_epoch 10 --lambda_value 1.0 --D_emb 256     # unsatble

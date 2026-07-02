@@ -1,0 +1,302 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.6;
+
+contract CunsumerDataSell{
+    uint256 count=0; //count for all the tokens
+    uint256 public volume;   // total volume of Clients
+    address [] Admins; // admins of the system
+   
+    struct Cunsumers{ // struct for the addresses of Cunsumers
+       // address dev;
+        address Controller;
+        address Cunsumer;
+        string  Cunsumer_Name;
+    }
+    
+    struct DataControllers{ // struct for the addresses of Cunsumers
+       // address dev;
+        address Controller;
+        address Cunsumer;
+        string  Controller_Name;
+    }
+    
+    struct DataOwners{ // struct for the addresses of Cunsumers
+       // address dev;
+        address Controller;
+        address Owner;
+        string  Owner_Name;
+    }
+    
+    mapping (address => DataOwners) public View_DataOwner;
+    mapping (address => Cunsumers) public View_CunsumerData;
+    //uint256 start = now;
+    mapping (address => DataControllers) public View_controllerData;
+    
+    //mapping (address => bool)   public Cunsumer_Account_IsRegistered;
+    
+    //mapping (address => bool) public Controller_Account_IsRegistered;
+    
+     
+    modifier onlyAdmin{ // for address user; check at modifications
+        bool Admin=false;
+        for(uint256 i = 0; i < Admins.length;i++){
+            if(msg.sender==Admins[i]){
+                Admin=true;
+                break;
+            }
+        }
+            require(!Admin);
+            _;
+    }
+ uint256 Time1=now;
+ function CunsumerDataSells() public onlyAdmin{
+        Admins.push(msg.sender); //creater of contract is the first admin
+    }
+
+
+ //uint256 meanTime;
+   // uint256 start = now;
+    //bytes32 hash_spec; 
+    
+    //******************************************************//
+    //******************************************************//
+    //                                                      //
+    //          Cunsumer Register Smart Contract             //
+    //                                                      //
+    //******************************************************//
+    //******************************************************//
+    
+    function CunsumerRecord (
+        address Controller, 
+        address Cunsumer, 
+        string memory  Cunsumer_Name
+        ) public onlyAdmin{ 
+        
+        View_CunsumerData[Cunsumer].Cunsumer_Name=Cunsumer_Name;
+        View_CunsumerData[Cunsumer].Cunsumer= Cunsumer;
+        View_CunsumerData[Cunsumer].Controller= Controller;
+        //only admin can add Cunsumers
+       
+        emit CunsumerAdded(Cunsumer, now-Time1);
+       
+    }   
+    event CunsumerAdded(address Cunsumer, uint256 Latency);
+   
+   
+   
+   
+   
+     function OwnerRecord (
+        address Controller, 
+        address Owner, 
+        string memory  Owner_Name
+        ) public onlyAdmin{ 
+            
+        View_DataOwner[Owner].Owner_Name=Owner_Name;
+        View_DataOwner[Owner].Owner= Owner;
+        View_DataOwner[Owner].Controller= Controller;
+        //only admin can add Cunsumers
+       
+        emit OwnerAdded(Owner, now-Time1);
+       
+    }   
+    event OwnerAdded(address Owner, uint256 Latency);
+    
+    //******************************************************//
+    //******************************************************//
+    //                                                      //
+    //           Controller Register Smart Contract             //
+    //                                                      //
+    //******************************************************//
+    //******************************************************//
+   
+     function ControllerRecord (
+        address Controller, 
+        address Cunsumer, 
+        string memory  Controller_Name
+        ) public onlyAdmin{ 
+            
+        View_controllerData[Controller].Controller_Name=Controller_Name;
+        View_controllerData[Controller].Cunsumer= Cunsumer;
+        View_controllerData[Controller].Controller= Controller;
+        //only admin can add Cunsumers
+       
+        emit ControllerAdded(Controller, now-Time1);
+       
+    }   
+    event ControllerAdded(address Controller, uint256 Latency);
+   
+   
+       
+    //******************************************************//
+    //******************************************************//
+    //                                                      //
+    //   Bidding Smart Contract                      //
+    //                                                      //
+    //******************************************************//
+    //******************************************************//
+   
+    uint256 Tim1=block.timestamp;
+    
+    struct AcceptedConsumer{
+        address Cunsumer;
+    }    
+   mapping (address => AcceptedConsumer) public View_AcceptedConsumer;
+   
+   struct Bid{
+       string expiry_date; // Standard human readable date, ISO 8601 UTC
+       bytes32 hash_spec;    // IPFS address to the claim file of the dataset specs of the bid. 
+       uint amount;        // Amount in wei for the bid.
+       string tag;	      // Keyword
+   }
+
+   /**
+    * An offer is issued by a dataset provider in response to an (active) bid. 
+    */
+   struct Offer{
+      address payable Controller;  // address of the Controller. .  
+      address Cunsumer;   // Cunsumer and bid_number identify the bid.
+      uint bid_number;
+      bytes32 hash_spec;    // IPFS address to the claim file of the dataset specs of the offer.
+      uint value;       // price proposed, in wei.
+      bool completed;
+   }
+
+    function IPFS_Hash_spec()public view returns(bytes32, uint256){    
+    bytes32 hash_spec= keccak256(abi.encodePacked(msg.sender));
+    uint256 Processing_Time=block.timestamp-Tim1;
+    return (hash_spec, Processing_Time);
+    }
+    //event Hash_spec(bytes32 hash_spec, address Cunsumer, uint256 Latency);
+    
+    
+   // Notification for interested parties of new bids.
+   event BidRegistered(
+          address who,
+          uint position,
+          uint256 Latency
+   );
+
+   // Notification for interested parties of new offers.
+   event OfferRegistered(
+          address from,
+          address to,
+          uint bid_number,   
+          uint offer_number,
+          uint value,
+          uint256 Latency
+   );
+
+   // The bids per Cunsumer.
+   mapping (address => Bid[]) public bids;
+   // The offers received per bid. Associates a (Cunsumer address, bid no) to a list of offers. 
+   mapping (address => mapping (uint => Offer[])) public offers;
+
+
+  /** @dev Register a temporary dataset bid.
+    * @param date Expiration date of the bid.
+    * @param hash_spec Hash to the spec of the bid.
+    * @param amount Amount to be paid for the dataset.
+    */
+  function Register_Bids(string memory date,
+                    bytes32 hash_spec,
+                    uint amount,
+                    string memory tag) public {
+      bids[msg.sender].push(Bid(date, hash_spec, amount, tag));
+      emit BidRegistered(msg.sender, bids[msg.sender].length-1, block.timestamp-Tim1);
+  }
+
+  /**
+   * Gets info of a particular bid.
+   * @param Cunsumer The address of the Cunsumer.
+   * @param pos The position in the list of bids by the Cunsumer (included in BidRegistered events). 
+   */
+  function BidInfo(address Cunsumer, uint pos) public view 
+            returns (string memory expiry_date, bytes32 hash_spec, uint amount, string memory tag, uint256 Latency){
+     Bid memory b = bids[Cunsumer][pos];
+     return (b.expiry_date, b.hash_spec, b.amount, b.tag, block.timestamp-Tim1);
+  }
+  /**
+   * An offer is a response to an (active) bid for a dataset.
+   * 
+   * Expiry dates of bids are considered informative and not checked inside the contract,
+   * it is expected that clients do the check. 
+   * after registering an offer, all other biders exept the accepted Cunsumer are assumed to be removed from the blochain by the system
+   */
+   function offer(address payable Controller, address Cunsumer, uint bidno, bytes32 hash_spec, uint price) public {
+         offers[Cunsumer][bidno].push(Offer(Controller, Cunsumer, bidno, hash_spec, price, false));
+         View_AcceptedConsumer[Cunsumer].Cunsumer= Cunsumer;
+         emit OfferRegistered(Controller, Cunsumer, bidno, offers[Cunsumer][bidno].length - 1, price, block.timestamp-Tim1);
+         emit Consumer_Accepted(Cunsumer);
+   }
+    event Consumer_Accepted(address Cunsumer);
+    
+   /** 
+    * The Cunsumer accepts and finalize an offer. 
+    * 
+    * Note Cunsumer is the transaction sender.
+    */
+   function finalize(uint bidno, uint offerno) public payable{
+        assert(msg.value==offers[msg.sender][bidno][offerno].value);
+        assert(msg.sender==offers[msg.sender][bidno][offerno].Cunsumer);
+        offers[msg.sender][bidno][offerno].completed = true;
+        // Transfer the value.
+	     offers[msg.sender][bidno][offerno].Controller.transfer(msg.value);
+	     emit PaymentCompleted(block.timestamp-Tim1);
+   } 
+   event PaymentCompleted(uint256 Latency);
+   
+   
+   //*****************************************************
+   
+   //Invitation to an accepted Cunsumer
+     function Invite_Consumer (address Controller, address Cunsumer) public view returns  (string memory, address Controller_ID, bytes32 Controller_DID, uint256 Processing_Time){
+        require(View_AcceptedConsumer[Cunsumer].Cunsumer==Cunsumer, "The Consumer you entered is not an accepted Consumer!, please try again");
+        bytes32 DID_1=keccak256(abi.encodePacked(Controller, msg.sender));
+        Controller_ID=Controller;
+        Controller_DID=DID_1;
+        Processing_Time=now-Time1;
+        return("Controller's invitation sent to the accepted Consumer! Here are the details of the submission:", Controller_ID, Controller_DID, Processing_Time);
+        
+    }
+   
+   //Resolving Controller's DID by the accepted Cunsumer
+    function Resolve_DID (address Controller,address Cunsumer, bytes32 Controller_DID) public view returns  (string memory, string memory,address Consumer_ID, uint256 Processing_Time){
+        
+       bytes32 DID_2=keccak256(abi.encodePacked(Controller, msg.sender));
+       require(Controller_DID==DID_2, "Invalid Controller_DID!");
+       Consumer_ID=Cunsumer;
+       Processing_Time=now-Time1;
+       return("D.I.D resolved!", "Invitation_Accepted!", Consumer_ID, Processing_Time);
+  
+    }
+   
+    
+    //Verifying Consumer ID
+    function Verify_ConsumerID (address Controller, address Cunsumer) public view returns  (string memory, address Consumer_ID, uint256 Verification_Latency) {
+     require(View_CunsumerData[Cunsumer].Cunsumer==Cunsumer, "The Consumer you have entered is not registered!");
+     require(View_controllerData[Controller].Cunsumer==Cunsumer, "The Consumer you have entered is not registered!");
+     Consumer_ID=Cunsumer;
+      Verification_Latency= now-Time1;
+     return ("Consumer Verified!", Consumer_ID, Verification_Latency);
+     }
+     
+     
+       //Verifying Controller ID
+    function Verify_ControllerID(address Controller, address Cunsumer) public view returns  (string memory, address Controller_ID, uint256 Verification_Latency, string memory) {
+        require(View_CunsumerData[Cunsumer].Controller==Controller, "The Controller you have entered is not registered!");
+        require(View_controllerData[Controller].Controller==Controller, "The Controller you have entered is not registered!");
+        Controller_ID=Controller;
+        Verification_Latency= now-Time1;
+         return ("Controller Verified!", Controller_ID, Verification_Latency, "P2P Connection Established! Kindly go to Finalize");
+        
+    }
+
+    
+    
+    
+    
+    
+    
+}    
+    
